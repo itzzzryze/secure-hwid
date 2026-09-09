@@ -83,11 +83,14 @@ Requires Visual Studio 2022 Community with the C++ desktop workload, installed a
 
 `build.bat` produces only `HWID.exe`. Decryption helpers are isolated in `test_support.h` for in-memory verification. Tests cover parser bounds, disk selection, hash composition, AES-GCM vectors, tamper rejection, chunked messages and webhook configuration. Delivery tests run locally; `--send-test` sends a synthetic report. `probe.bat` and `probe_hardware.bat` check live GPU and C: reads without printing identifiers.
 
-<details>
-<summary>animation frames</summary>
+## API references
 
-<img src="assets/motion.png" width="960" alt="Opening and closing scale samples from the application renderer" />
-
-`preview.bat` renders the UI states and motion samples. Opening scales from 0.1 to 1.0 over 920 ms; closing shrinks and fades over 620 ms. Windows' reduced-motion setting is respected.
-
-</details>
+- [SetupDiGetDeviceInstanceIdW](https://learn.microsoft.com/en-us/windows/win32/api/setupapi/nf-setupapi-setupdigetdeviceinstanceidw): PCI device-instance IDs.
+- [NVIDIA NVML device queries](https://docs.nvidia.com/deploy/nvml-api/group__nvmlDeviceQueries.html): GPU UUIDs.
+- [Microsoft Platform Crypto Provider sample](https://github.com/microsoft/TSS.MSR/blob/main/PCPTool.v11/exe/SDKSample.cpp): TPM endorsement public key access.
+- [IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS](https://learn.microsoft.com/en-us/windows/win32/api/winioctl/ni-winioctl-ioctl_volume_get_volume_disk_extents): C: volume-to-disk mapping.
+- [IOCTL_STORAGE_QUERY_PROPERTY](https://learn.microsoft.com/en-us/windows/win32/api/winioctl/ni-winioctl-ioctl_storage_query_property) and [STORAGE_DEVICE_DESCRIPTOR](https://learn.microsoft.com/en-us/windows/win32/api/winioctl/ns-winioctl-storage_device_descriptor): storage serial queries.
+- [CNG authenticated cipher parameters](https://learn.microsoft.com/en-us/windows/win32/api/bcrypt/ns-bcrypt-bcrypt_authenticated_cipher_mode_info): AES-GCM nonce, tag and AAD.
+- [BCryptDeriveKeyPBKDF2](https://learn.microsoft.com/en-us/windows/win32/api/bcrypt/nf-bcrypt-bcryptderivekeypbkdf2): key derivation.
+- [CryptProtectMemory](https://learn.microsoft.com/en-us/windows/win32/api/dpapi/nf-dpapi-cryptprotectmemory), [VirtualLock](https://learn.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-virtuallock) and [SecureZeroMemory](https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-securezeromemory): sensitive memory handling.
+- [Discord webhook execution](https://docs.discord.com/developers/resources/webhook#execute-webhook) and [embed limits](https://docs.discord.com/developers/resources/message#embed-limits): report delivery.
