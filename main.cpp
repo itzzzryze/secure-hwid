@@ -140,6 +140,7 @@ static void HwidWorker() {
         if (g_hwid.stage == 5) {
             std::string message(error.what());
             if (message == "Discord rate limited - retry later") g_hwid.errorTitle = L"Retry Discord later";
+            else if (message == "report exceeds Discord message limit") g_hwid.errorTitle = L"Report exceeds Discord limit";
             else if (message == "Discord webhook unavailable") g_hwid.errorTitle = L"Webhook unavailable";
         }
     }

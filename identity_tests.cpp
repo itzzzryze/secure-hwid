@@ -1,10 +1,9 @@
 #define WIN32_LEAN_AND_MEAN
 #include "identity.h"
-#include "encrypted_payload.h"
+#include "test_support.h"
 #include "hardware_identity.h"
 #include <cassert>
 #include <iostream>
-#include <fstream>
 using namespace identity;
 static Bytes Entry(const std::wstring& name, Bytes value, bool last, unsigned char padding = 0) {
     size_t dataOffset = 32 + (name.size() + 1) * 2;
@@ -16,7 +15,7 @@ static Bytes Entry(const std::wstring& name, Bytes value, bool last, unsigned ch
     memcpy(entry.data() + dataOffset, value.data(), value.size());
     return entry;
 }
-int main(int argc, char** argv) {
+int main() {
     auto sha = Sha256(Bytes{'a','b','c'});
     assert(Hex(sha.data(), sha.size()) == "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
     auto a = Entry(L"OfflineUniqueIDRandomSeed", {1,2,3}, true, 0);
@@ -186,8 +185,4 @@ int main(int argc, char** argv) {
         assert(rejected);
     }
     std::cout << "PASS: Base64, AES-GCM known vector, JSON roundtrip, fresh randomness, optional fields, tamper rejection\n";
-    if (argc == 2 && std::string(argv[1]) == "--fixtures") {
-        std::ofstream("synthetic-payload.enc", std::ios::binary) << encrypted;
-        std::ofstream("synthetic-payload.json", std::ios::binary) << json;
-    }
 }

@@ -1,7 +1,7 @@
 #define WIN32_LEAN_AND_MEAN
 #include "identity.h"
 #include "hardware_identity.h"
-#include "encrypted_payload.h"
+#include "test_support.h"
 #include <iostream>
 #include <cstring>
 

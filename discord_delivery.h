@@ -7,31 +7,39 @@
 
 namespace delivery {
 struct RequestBody {
-    std::wstring contentType;
     std::string body;
     RequestBody() = default;
     RequestBody(const RequestBody&) = delete;
     RequestBody& operator=(const RequestBody&) = delete;
-    RequestBody(RequestBody&& other) noexcept : contentType(std::move(other.contentType)), body(std::move(other.body)) {}
+    RequestBody(RequestBody&& other) noexcept : body(std::move(other.body)) {}
     ~RequestBody() { if (!body.empty()) SecureZeroMemory(&body[0], body.size()); }
 };
 inline std::string Field(const std::string& name, const std::string& value) {
     return "{\"name\":" + payload::Quote(name) + ",\"value\":" + payload::Quote(value) + ",\"inline\":false}";
 }
+constexpr size_t CiphertextChunk = 1000;
+constexpr size_t MaxCiphertextChars = 4800; // Includes headroom for metadata within one Discord embed.
 inline RequestBody Compose(const std::string& encrypted, bool test = false) {
     auto block = payload::Unbase64(encrypted);
     const unsigned char magic[] = {'H','W','E','N',1};
     if (block.size() <= 49 || memcmp(block.data(), magic, 5)) throw std::runtime_error("invalid encrypted report");
+    std::string cipher = payload::Base64(identity::Bytes(block.begin() + 49, block.end()));
+    if (cipher.size() > MaxCiphertextChars) throw std::runtime_error("report exceeds Discord message limit");
     payload::Secret key;
     payload::Derive(block.data() + 5, key);
-    std::string cipher = payload::Base64(identity::Bytes(block.begin() + 49, block.end()));
-    std::string json = "{\"allowed_mentions\":{\"parse\":[]},\"embeds\":[{\"title\":" +
+    RequestBody result;
+    auto& json = result.body;
+    json.reserve(8192);
+    json += "{\"allowed_mentions\":{\"parse\":[]},\"embeds\":[{\"title\":" +
         payload::Quote(test ? "HWID delivery test - synthetic data" : "HWID report") +
-        ",\"color\":13162723,\"description\":\"Encrypted UTF-8 JSON. All decryption parameters are below. The attached encrypted.txt is compatible with HWID-decrypt.exe.\",\"fields\":[";
-    secure_memory::WipeOnExit<std::string> wipeJson(json);
-    json.reserve(8192); // Reserve before adding secrets, avoiding stale key copies in reallocated buffers.
+        ",\"color\":13162723,\"description\":\"Encrypted UTF-8 JSON.\",\"fields\":[";
     json += Field("Encryption", "AES-256-GCM | UTF-8 JSON | Base64 ciphertext");
-    json += "," + Field("Ciphertext (Base64)", cipher.size() <= 1000 ? "```\n" + cipher + "\n```" : "See ciphertext.txt attachment.");
+    const size_t chunks = (cipher.size() + CiphertextChunk - 1) / CiphertextChunk;
+    for (size_t i = 0; i < chunks; ++i) {
+        std::string label = "Ciphertext (Base64)";
+        if (chunks > 1) label += " " + std::to_string(i + 1) + "/" + std::to_string(chunks);
+        json += "," + Field(label, "```\n" + cipher.substr(i * CiphertextChunk, CiphertextChunk) + "\n```");
+    }
     json += ",{\"name\":\"AES key (hex - use directly, do not hash)\",\"value\":\"```\\u000a";
     key.Use([&](unsigned char* bytes) {
         const char* digits = "0123456789abcdef";
@@ -45,17 +53,6 @@ inline RequestBody Compose(const std::string& encrypted, bool test = false) {
         payload::Base64(identity::Bytes(block.begin() + 33, block.begin() + 49)) + "\n```");
     json += "," + Field("Additional authenticated data / AAD (hex)", "```\n" + identity::Hex(block.data(), 33) + "\n```");
     json += "]}]}";
-    unsigned char random[16]{};
-    payload::Check(BCryptGenRandom(nullptr, random, sizeof(random), BCRYPT_USE_SYSTEM_PREFERRED_RNG), "delivery setup failed");
-    std::string boundary = "hwid-" + identity::Hex(random, sizeof(random));
-    RequestBody result;
-    result.contentType = L"Content-Type: multipart/form-data; boundary=" + std::wstring(boundary.begin(), boundary.end()) + L"\r\n";
-    result.body.reserve(json.size() + encrypted.size() + cipher.size() + 2048);
-    result.body += "--" + boundary + "\r\nContent-Disposition: form-data; name=\"payload_json\"\r\nContent-Type: application/json\r\n\r\n";
-    result.body += json;
-    result.body += "\r\n--" + boundary + "\r\nContent-Disposition: form-data; name=\"files[0]\"; filename=\"encrypted.txt\"\r\nContent-Type: text/plain; charset=utf-8\r\n\r\n" + encrypted;
-    if (cipher.size() > 1000) result.body += "\r\n--" + boundary + "\r\nContent-Disposition: form-data; name=\"files[1]\"; filename=\"ciphertext.txt\"\r\nContent-Type: text/plain; charset=utf-8\r\n\r\n" + cipher;
-    result.body += "\r\n--" + boundary + "--\r\n";
     return result;
 }
 struct InternetHandle {
@@ -83,7 +80,7 @@ inline void Send(const std::string& encrypted, const std::atomic_bool& cancel, b
     if (!WinHttpSetOption(request.value, WINHTTP_OPTION_DISABLE_FEATURE, &disabled, sizeof(disabled)))
         throw std::runtime_error("Discord connection setup failed");
     if (cancel) throw std::runtime_error("delivery cancelled");
-    if (!WinHttpSendRequest(request.value, message.contentType.c_str(), (DWORD)-1,
+    if (!WinHttpSendRequest(request.value, L"Content-Type: application/json\r\n", (DWORD)-1,
         &message.body[0], (DWORD)message.body.size(), (DWORD)message.body.size(), 0) ||
         !WinHttpReceiveResponse(request.value, nullptr)) throw std::runtime_error("Discord delivery not confirmed");
     DWORD status = 0, size = sizeof(status);

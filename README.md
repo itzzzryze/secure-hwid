@@ -48,26 +48,22 @@ UTF-8 JSON is encrypted with AES-256-GCM. Key derivation uses PBKDF2-HMAC-SHA256
 Base64("HWEN" || 0x01 || salt[16] || nonce[12] || tag[16] || ciphertext)
 ```
 
-The first 33 bytes are authenticated as AAD. Discord receives `encrypted.txt`, the raw AES key, nonce, tag in hex and Base64, and AAD. Anyone with access to that message can decrypt the report. Delivery uses HTTPS; `done` requires Discord confirmation. Reports are assembled in memory.
+The first 33 bytes are authenticated as AAD. Discord receives the ciphertext, raw AES key, nonce, tag in hex and Base64, and AAD in one message. Ciphertext over 1,000 characters uses numbered fields; concatenate them in order. Reports above 4,800 Base64 characters are rejected before delivery to fit [Discord's embed limits](https://docs.discord.com/developers/resources/message#embed-limits).
+
+The client writes no report files and sends no attachments. Delivery uses HTTPS; `done` requires Discord confirmation. Anyone with access to the message can decrypt the report. AES derivation remains in the client for this version.
 
 ## usage
 
-Download the [release ZIP](https://github.com/itzzzryze/secure-hwid/releases/latest) and extract it. Open PowerShell as administrator in that folder:
+Download [HWID.exe](https://github.com/itzzzryze/secure-hwid/releases/latest/download/HWID.exe). Open PowerShell as administrator in that folder:
 
 ```powershell
 $env:SECURE_HWID_WEBHOOK = Read-Host 'Discord webhook URL'
 .\HWID.exe
 ```
 
-Use a standard `https://discord.com/api/webhooks/` URL without query parameters. The destination is read at runtime. Missing configuration stops collection. The executables are unsigned.
+Use a standard `https://discord.com/api/webhooks/` URL without query parameters. The destination is read at runtime. Missing configuration stops collection. The executable is unsigned.
 
-Download `encrypted.txt` from the Discord message and decrypt it:
-
-```powershell
-.\HWID-decrypt.exe .\encrypted.txt
-```
-
-Decryption does not require administrator rights. After a delivery timeout, check Discord before retrying; the message may already exist.
+The customer interface shows collection, delivery and completion. It has no report viewer, export or decryption controls. After a delivery timeout, check Discord before retrying; the message may already exist.
 
 ## limits
 
@@ -85,7 +81,7 @@ Requires Visual Studio 2022 Community with the C++ desktop workload, installed a
 .\test_delivery.bat
 ```
 
-Tests cover parser bounds, disk selection, hash composition, AES-GCM vectors, tamper rejection and webhook configuration. Delivery tests run locally; `--send-test` sends a synthetic report. `probe.bat` and `probe_hardware.bat` check live GPU and C: reads without printing identifiers.
+`build.bat` produces only `HWID.exe`. Decryption helpers are isolated in `test_support.h` for in-memory verification. Tests cover parser bounds, disk selection, hash composition, AES-GCM vectors, tamper rejection, chunked messages and webhook configuration. Delivery tests run locally; `--send-test` sends a synthetic report. `probe.bat` and `probe_hardware.bat` check live GPU and C: reads without printing identifiers.
 
 <details>
 <summary>animation frames</summary>
