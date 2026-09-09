@@ -1,4 +1,4 @@
-// Render the actual UI offscreen with synthetic state; does not query hardware.
+// Offscreen UI previews with synthetic state.
 #include "main.cpp"
 #include <iostream>
 int main() {

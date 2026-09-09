@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="122" height="28" role="img" aria-label="C++: MSVC">
+<title>C++: MSVC</title>
+<path fill="#1e1e2e" d="M0 0h56v28H0z"/>
+<path fill="#a6e3a1" d="M56 0h66v28H56z"/>
+<g font-family="Verdana,DejaVu Sans,sans-serif" font-size="10" font-weight="700" text-anchor="middle" letter-spacing="1">
+<text x="28.0" y="18" fill="#fff">C++</text>
+<text x="89.0" y="18" fill="#1e1e2e">MSVC</text>
+</g>
+</svg>

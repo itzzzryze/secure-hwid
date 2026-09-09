@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="146" height="28" role="img" aria-label="AES: 256-GCM">
+<title>AES: 256-GCM</title>
+<path fill="#1e1e2e" d="M0 0h56v28H0z"/>
+<path fill="#f5c2e7" d="M56 0h90v28H56z"/>
+<g font-family="Verdana,DejaVu Sans,sans-serif" font-size="10" font-weight="700" text-anchor="middle" letter-spacing="1">
+<text x="28.0" y="18" fill="#fff">AES</text>
+<text x="101.0" y="18" fill="#1e1e2e">256-GCM</text>
+</g>
+</svg>

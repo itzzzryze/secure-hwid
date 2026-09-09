@@ -155,7 +155,7 @@ inline void ReadGpu(Fields& fields) {
     if (!count) count = reinterpret_cast<Count>(GetProcAddress(lib, "nvmlDeviceGetCount"));
     auto handle = reinterpret_cast<Handle>(GetProcAddress(lib, "nvmlDeviceGetHandleByIndex_v2"));
     if (!handle) handle = reinterpret_cast<Handle>(GetProcAddress(lib, "nvmlDeviceGetHandleByIndex"));
-    // Same GPU identity as spoofed's nvidia-smi --query-gpu=uuid, queried directly.
+    // NVML UUID, also exposed by nvidia-smi --query-gpu=uuid.
     auto uuid = reinterpret_cast<Serial>(GetProcAddress(lib, "nvmlDeviceGetUUID"));
     std::vector<std::string> uuids;
     try {

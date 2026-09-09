@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="172" height="28" role="img" aria-label="RELEASE: V1.0.0">
+<title>RELEASE: V1.0.0</title>
+<path fill="#1e1e2e" d="M0 0h90v28H0z"/>
+<path fill="#89b4fa" d="M90 0h82v28H90z"/>
+<g font-family="Verdana,DejaVu Sans,sans-serif" font-size="10" font-weight="700" text-anchor="middle" letter-spacing="1">
+<text x="45.0" y="18" fill="#fff">RELEASE</text>
+<text x="131.0" y="18" fill="#1e1e2e">V1.0.0</text>
+</g>
+</svg>

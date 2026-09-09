@@ -33,8 +33,7 @@ inline void AddGpuPciIds(Fields& fields, std::vector<std::string> values) {
         fields["gpu/pci/" + std::to_string(i)] = Bytes(values[i].begin(), values[i].end());
 }
 inline void ReadGpuPci(Fields& fields) {
-    // Same PnP device-instance ID as spoofed's Win32_VideoController.PNPDeviceID.
-    // Query the present display device set directly, including AMD/Intel PCI GPUs.
+    // Present PCI display devices, including AMD and Intel adapters.
     const GUID displayClass = {0x4d36e968, 0xe325, 0x11ce, {0xbf,0xc1,0x08,0x00,0x2b,0xe1,0x03,0x18}};
     HDEVINFO set = SetupDiGetClassDevsW(&displayClass, nullptr, nullptr, DIGCF_PRESENT);
     if (set == INVALID_HANDLE_VALUE) throw std::runtime_error("GPU PCI enumeration failed");
@@ -128,7 +127,7 @@ inline std::string QueryStorageSerial(HANDLE disk) {
 inline void ReadCDrive(Fields& fields) {
     DeviceHandle volume(L"\\\\.\\C:");
     DWORD number = ReadMainDiskNumber(volume.value);
-    // Never enumerate PhysicalDrive0..N, assume disk 0, or fall back to another disk.
+    // Restrict the physical-device query to the disk backing C:.
     DeviceHandle disk(L"\\\\.\\PhysicalDrive" + std::to_wstring(number));
     auto serial = QueryStorageSerial(disk.value);
     if (QueryStorageSerial(disk.value) != serial || ReadMainDiskNumber(volume.value) != number)

