@@ -1,0 +1,25 @@
+# Local credentials and configuration
+.env
+.env.*
+!.env.example
+webhook_config.local.h
+webhook*.txt
+
+# Build products, local reports and diagnostics
+*.exe
+*.obj
+*.pdb
+*.ilk
+*.exp
+*.lib
+*.log
+*.enc
+synthetic-payload.*
+user_vector.*
+encrypted.txt
+ciphertext.txt
+ui-preview.png
+motion-preview.png
+dist/
+.vs/
+
