@@ -23,10 +23,27 @@ int main() {
     try {
         identity::Fields fields, again;
         identity::ReadGpuPci(fields);
+        identity::ReadSmbios(fields);
         identity::ReadCDrive(fields);
         identity::ReadGpuPci(again);
+        identity::ReadSmbios(again);
         identity::ReadCDrive(again);
         if (fields != again) throw std::runtime_error("hardware reads changed");
+        auto expectedUuid = Ascii(Expected(L"HWID_EXPECTED_SMBIOS_UUID"));
+        for (auto& c : expectedUuid) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+        if (!expectedUuid.empty()) {
+            const auto& actual = fields.at("smbios/system-uuid");
+            if (std::string(actual.begin(), actual.end()) != expectedUuid) throw std::runtime_error("SMBIOS UUID comparison failed");
+        }
+        auto expectedBoard = Ascii(Expected(L"HWID_EXPECTED_BASEBOARD"));
+        if (!expectedBoard.empty()) {
+            const auto& actual = fields.at("smbios/baseboard/0");
+            if (std::string(actual.begin(), actual.end()) != expectedBoard) throw std::runtime_error("SMBIOS baseboard comparison failed");
+        }
+        if (!expectedUuid.empty() && !expectedBoard.empty()) std::cout << "PASS: SMBIOS values match independent Windows queries\n";
+        std::cout << "SMBIOS UUID=" << fields.count("smbios/system-uuid")
+                  << " baseboard serial=" << fields.count("smbios/baseboard/0")
+                  << " NVMe Identify=" << (fields.count("storage/c/nvme-identify-serial") ? "available" : "unavailable") << '\n';
         size_t gpuCount = 0;
         auto expectedGpu = Expected(L"HWID_EXPECTED_PCI");
         identity::Fields expectedPci;

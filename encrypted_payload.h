@@ -67,7 +67,7 @@ inline std::string Quote(const std::string& value) {
 inline std::string Json(const identity::Fields& nvram, const identity::Fields& optional) {
     auto combined = identity::CombinedDigest(nvram, optional);
     auto nvramSerial = identity::Sha256(identity::Encode(nvram));
-    std::string out = "{\n  \"hwid\": " + Quote(Base64(combined)) +
+    std::string out = "{\n  \"hwid_version\": 3,\n  \"hwid\": " + Quote(Base64(combined)) +
         ",\n  \"nvram\": " + Quote(identity::Hex(nvramSerial.data(), nvramSerial.size())) +
         ",\n  \"tpm_fingerprint\": ";
     auto tpm = optional.find("tpm/ekpub-sha256");
@@ -91,7 +91,19 @@ inline std::string Json(const identity::Fields& nvram, const identity::Fields& o
     out += ",\n  \"c_drive\": {\n    \"volume\": \"C:\",\n    \"storage_query_property_serial\": ";
     auto storage = optional.find("storage/c/serial");
     out += storage == optional.end() ? "null" : Quote(std::string(storage->second.begin(), storage->second.end()));
-    out += "\n  }\n}\n";
+    auto nvme = optional.find("storage/c/nvme-identify-serial");
+    out += ",\n    \"nvme_identify_serial\": ";
+    out += nvme == optional.end() ? "null" : Quote(std::string(nvme->second.begin(), nvme->second.end()));
+    out += "\n  },\n  \"smbios\": {\n    \"system_uuid\": ";
+    auto uuid = optional.find("smbios/system-uuid");
+    out += uuid == optional.end() ? "null" : Quote(std::string(uuid->second.begin(), uuid->second.end()));
+    out += ",\n    \"baseboard_serials\": [";
+    first = true;
+    for (const auto& field : optional) if (field.first.find("smbios/baseboard/") == 0) {
+        out += first ? "\n      " : ",\n      ";
+        out += Quote(std::string(field.second.begin(), field.second.end())); first = false;
+    }
+    out += first ? "]\n  }\n}\n" : "\n    ]\n  }\n}\n";
     return out;
 }
 inline void Derive(const unsigned char* salt, Secret& output) {

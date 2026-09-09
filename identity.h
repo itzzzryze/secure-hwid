@@ -214,7 +214,9 @@ inline Bytes CombinedDigest(const Fields& nvram, const Fields& optional) {
     if (nvram.empty()) throw std::runtime_error("no NVRAM identity variables found");
     Fields parts = optional;
     parts["nvram/sha256"] = Sha256(Encode(nvram));
-    return Sha256(Encode(parts));
+    auto encoded = Encode(parts);
+    encoded[4] = 3; // Primary identity schema; firmware component encoding stays at version 2.
+    return Sha256(encoded);
 }
 inline std::string Combine(const Fields& nvram, const Fields& optional) {
     auto hash = CombinedDigest(nvram, optional);

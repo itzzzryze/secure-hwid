@@ -1,5 +1,6 @@
 #pragma once
 #include "identity.h"
+#include "primary_identity.h"
 #include <setupapi.h>
 #include <winioctl.h>
 #include <cstddef>
@@ -130,8 +131,10 @@ inline void ReadCDrive(Fields& fields) {
     // Restrict the physical-device query to the disk backing C:.
     DeviceHandle disk(L"\\\\.\\PhysicalDrive" + std::to_wstring(number));
     auto serial = QueryStorageSerial(disk.value);
-    if (QueryStorageSerial(disk.value) != serial || ReadMainDiskNumber(volume.value) != number)
+    auto nvme = QueryNvmeSerial(disk.value);
+    if (QueryStorageSerial(disk.value) != serial || QueryNvmeSerial(disk.value) != nvme || ReadMainDiskNumber(volume.value) != number)
         throw std::runtime_error("C: storage identity changed during collection");
     fields["storage/c/serial"] = Bytes(serial.begin(), serial.end());
+    if (!nvme.empty()) fields["storage/c/nvme-identify-serial"] = Bytes(nvme.begin(), nvme.end());
 }
 }

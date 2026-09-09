@@ -22,25 +22,31 @@ secure-hwid collects hardware identifiers through Windows device and firmware in
 | Component | Collection method | Requirement |
 | --- | --- | --- |
 | NVRAM | `NtEnumerateSystemEnvironmentValuesEx`; selected firmware variables | Required |
+| SMBIOS | `GetSystemFirmwareTable('RSMB')`; Type 1 system UUID and Type 2 baseboard serials | Valid values when present |
 | GPU PCI ID | [SetupAPI](https://learn.microsoft.com/en-us/windows/win32/api/setupapi/nf-setupapi-setupdigetdeviceinstanceidw); present PCI display devices | When available |
 | NVIDIA UUID | [NVML](https://docs.nvidia.com/deploy/nvml-api/group__nvmlDeviceQueries.html); `nvmlDeviceGetUUID` | When available |
 | TPM fingerprint | Platform Crypto Provider; SHA-256 of the endorsement public key | When available |
 | C: storage serial | Volume disk extents, then [StorageDeviceProperty](https://learn.microsoft.com/en-us/windows/win32/api/winioctl/ns-winioctl-storage_device_descriptor) on the backing disk | Required |
+| C: NVMe serial | Protocol-specific storage query; NVMe Identify Controller | When exposed by the storage stack |
 
 The firmware input consists of `OfflineUniqueIDEKPub`, `OfflineUniqueIDEKPubCRC`, `OfflineUniqueIDRandomSeed`, `OfflineUniqueIDRandomSeedCRC`, and `UnlockIDCopy`. At least one nonempty value must exist. Vendor GUIDs and variable names identify each value; record padding is excluded.
 
-Let `E` encode sorted fields as `HWID || 0x02`, followed by length-prefixed names and values. Lengths are unsigned 32-bit little-endian integers.
+Let `E_v` encode sorted fields as `HWID || version-byte`, followed by length-prefixed names and values. Lengths are unsigned 32-bit little-endian integers.
 
 ```text
-N = SHA256(E(firmware values))
-HWID = Base64(SHA256(E(N, available GPU/TPM values, C: serial)))
+N = SHA256(E_2(firmware values))
+HWID = Base64(SHA256(E_3(N, GPU/TPM values, C: serial, SMBIOS values, C: NVMe serial)))
 ```
 
 GPU values are sorted and deduplicated. The C: mapping and storage serial are read twice. Missing serials and C: volumes spanning distinct disks stop collection. Other drives are excluded.
 
+SMBIOS UUID byte order follows the reported SMBIOS version. Zero/FF UUIDs and placeholder board serials are omitted; board serials are sorted and deduplicated. SMBIOS and NVMe reads must repeat consistently. Unsupported NVMe queries produce `null`, including storage stacks that hide the controller. No other disk is substituted. Malformed responses stop collection.
+
+`hwid_version: 3` identifies this primary format. Its hashes differ from version 2, including when the added sources are unavailable. Available SMBIOS and NVMe values are primary hash inputs. Supporting identifiers and backend validation are not implemented.
+
 ## report format
 
-The decrypted JSON contains `hwid`, `nvram`, `tpm_fingerprint`, `gpu_serial_source`, `gpu_serials`, `gpu_uuids`, and `c_drive.storage_query_property_serial`. `gpu_serials` contains PCI device-instance IDs. Missing TPM data is `null`; missing GPU sources produce empty arrays.
+The decrypted JSON contains `hwid_version`, `hwid`, `nvram`, `tpm_fingerprint`, `gpu_serial_source`, `gpu_serials`, `gpu_uuids`, `smbios.system_uuid`, `smbios.baseboard_serials`, `c_drive.storage_query_property_serial`, and `c_drive.nvme_identify_serial`. `gpu_serials` contains PCI device-instance IDs. Unavailable optional scalar values are `null`; unavailable array values are empty.
 
 UTF-8 JSON is encrypted with AES-256-GCM. Key derivation uses PBKDF2-HMAC-SHA256 with 600,000 iterations and a random 16-byte salt. Each report has a random 12-byte nonce and a 16-byte authentication tag.
 
@@ -85,6 +91,8 @@ Requires Visual Studio 2022 Community with the C++ desktop workload, installed a
 
 ## API references
 
+- [GetSystemFirmwareTable](https://learn.microsoft.com/en-us/windows/win32/api/sysinfoapi/nf-sysinfoapi-getsystemfirmwaretable): raw SMBIOS tables.
+- [Windows NVMe protocol queries](https://learn.microsoft.com/en-us/windows/win32/fileio/working-with-nvme-devices): Identify Controller through `IOCTL_STORAGE_QUERY_PROPERTY`.
 - [SetupDiGetDeviceInstanceIdW](https://learn.microsoft.com/en-us/windows/win32/api/setupapi/nf-setupapi-setupdigetdeviceinstanceidw): PCI device-instance IDs.
 - [NVIDIA NVML device queries](https://docs.nvidia.com/deploy/nvml-api/group__nvmlDeviceQueries.html): GPU UUIDs.
 - [Microsoft Platform Crypto Provider sample](https://github.com/microsoft/TSS.MSR/blob/main/PCPTool.v11/exe/SDKSample.cpp): TPM endorsement public key access.

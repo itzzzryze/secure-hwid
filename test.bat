@@ -8,4 +8,8 @@ if errorlevel 1 exit /b 1
 cl /nologo /EHsc /W4 config_tests.cpp /Fe:config_tests.exe
 if errorlevel 1 exit /b 1
 config_tests.exe
+if errorlevel 1 exit /b 1
+cl /nologo /EHsc /W4 primary_tests.cpp /Fe:primary_tests.exe /link shell32.lib ole32.lib
+if errorlevel 1 exit /b 1
+primary_tests.exe
 exit /b %ERRORLEVEL%

@@ -114,6 +114,7 @@ static void HwidWorker() {
         identity::Fields optional;
         ClearFields wipeOptional{optional};
         if (nvram.empty()) throw std::runtime_error("firmware identity unavailable");
+        identity::ReadSmbios(optional);
         g_hwid.stage = 1;
         identity::ReadGpuPci(optional);
         identity::ReadGpu(optional);
